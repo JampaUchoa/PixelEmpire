@@ -219,31 +219,41 @@ $(document).ready(function() {
 
     function drawTerrain() {
 
-      drawCalls = 0
+      var previousColor;
+      var colorStreak;
+      var streakStart;
 
-//      if (camera.x == lastX && camera.y == lastY && lastTile == tileSize){
-//        return;
-//      }
+      drawCalls = 0
 
       // terrain rendering
       for (j = viewport.y.begin; j < viewport.y.end; j++){
         for (i = viewport.x.begin; i < viewport.x.end; i++){
 
           if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
-            ctx.fillStyle = biomes[mapInfo[j][i]].floorColor;
+            tileColor = biomes[mapInfo[j][i]].floorColor;
           } else {
-            ctx.fillStyle = "#3876EC";
+            tileColor = "#3876EC";
           }
-          ctx.fillRect(camera.x + (i * tileSize), camera.y + (j * tileSize), tileSize, tileSize);
-          drawCalls += 1
-//        ctx.fillStyle = "#000";
-//        ctx.fillText("x:" + i + ", y:" + j,camera.x + (i * tileSize) + 10,camera.y + (j * tileSize) + 20) + 10;
+
+          if (tileColor == previousColor){ // this pixel is equal to prevous pixel
+            colorStreak += 1; // Add to the streak
+          } else {// this is a new pixel
+            ctx.fillStyle = previousColor;
+            ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
+            colorStreak = 1; // Initialize a new streak
+            streakStart = i; // start here
+            previousColor = tileColor;
+            drawCalls += 1 // increase drawcall;
+          }
+
+          if (i == (viewport.x.end - 1)){ // last pixel
+            ctx.fillStyle = previousColor;
+            ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
+            previousColor = colorStreak = streakStart = undefined;
+          }
+
         }
       }
-
-//      lastX = camera.x;
-//      lastY = camera.y;
-//      lastTile = tileSize;
 
     }
 
