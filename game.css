@@ -1,0 +1,49 @@
+#topbar{
+  height: 25px;
+  background-color: #DEAE3D;
+  border-bottom: 1px solid #402701;
+  padding: 5px 10px;
+}
+.hidden{
+  display: none;
+}
+
+.debug{
+  position: absolute;
+  top: 0;
+  width: 100%;
+  background-color: rgba(7, 7, 7, 0.75);
+  padding: 11px 0;
+  color: white;
+}
+.debug div{
+  display: inline-block;
+  border-right: 1px solid #eee;
+  padding: 0 5px;
+}
+
+
+#map{
+  margin: 0 auto;
+  display: block;
+}
+
+#minimap{
+  z-index: 2;
+  padding: 5px;
+  margin: 15px 15px;
+  background-color: rgba(7, 7, 7, 0.75);
+}
+
+.hud{
+  position: absolute;
+  bottom: 0;
+  color: white;
+
+/*  background-color: rgba(7, 7, 7, 0.75);*/
+
+}
+
+.move{
+  cursor: move;
+}
