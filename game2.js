@@ -23,10 +23,10 @@ $(document).ready(function() {
             noiseAmmount: 0.001,
           }
         ];
-
-  tileSize = 50 // zoom ammount
-  minTileSize = 25 // min zoom
-  maxTileSize = 75 // max zoom
+//  object : (xcoord,ycoord,xsubcoord,ysubcoord, objectType)
+  tileSize = 20 // zoom ammount
+  minTileSize = 10 // min zoom
+  maxTileSize = 40 // max zoom
 
   fpsCount = 0;   // debug benchmark
   fpsElapsed = new Date().getTime();
@@ -37,9 +37,9 @@ $(document).ready(function() {
 
   //Map size
 
-  mapHeight = 100
-  mapWidth = 100
-  mapSize = (mapWidth * 2 + 1) * (mapHeight * 2 + 1)
+  mapHeight = 100;
+  mapWidth = 100;
+  mapSize = (mapWidth * 2 + 1) * (mapHeight * 2 + 1);
 
   mapInfo = [] // map terrain information
 
@@ -67,6 +67,7 @@ $(document).ready(function() {
     }
   }
 
+  console.log("eee");
   // Create biomes
 
   queue = [];
@@ -74,34 +75,53 @@ $(document).ready(function() {
   queue.push([0,0,0]) // enforce center being solid
   // Set first blocks
 
-  for (j = 0; j <= Math.round(mapSize / 2000); j++){
+  for (j = 0; j <= Math.round(mapSize / 10000); j++){
     queue.push([rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), rand(0,biomes.length - 1)]);
     queueSize += 1
   }
 
   // Process world - Biome creation
+  shoots = 0
+  hit = 0
+  miss = 0
 
-  while (queueSize > 0){
-    queueSize -= 1
+  while (true){
+    shoots += 1
     tile = queue.shift();
+    if (tile == undefined){
+      break;
+    }
     x = tile[0];
     y = tile[1];
     biome = tile[2];
 
-    if (x > mapWidth || y > mapHeight || y < -mapHeight || x < -mapWidth || mapInfo[y][x] != -1){
+    if (mapInfo[y][x] != -1){
+      miss +=1
       continue;
     }
 
+    hit += 1
     mapInfo[y][x] = biome;
-    queueSize += 4
-    queue.push([x + 1, y, biome]);
-    queue.push([x - 1, y, biome]);
-    queue.push([x, y + 1, biome]);
-    queue.push([x, y - 1, biome]);
+
+    queueTest(x + 1, y, biome)
+    queueTest(x - 1, y, biome)
+    queueTest(x, y + 1, biome)
+    queueTest(x, y - 1, biome)
+
+  //  queue.push([x + 1, y, biome]);
+  //  queue.push([x - 1, y, biome]);
+  //  queue.push([x, y + 1, biome]);
+  //  queue.push([x, y - 1, biome]);
 
   }
 
-  console.log(mapSize);
+  function queueTest(x, y, biome){
+    if (!(x > mapWidth || y > mapHeight || y < -mapHeight || x < -mapWidth || mapInfo[y][x] != -1)){
+      queue.push([x, y, biome]);
+    }
+  }
+
+  console.log("S=" + shoots + " H=" + hit + " M=" + miss);
   // Minimap render
 
   var minimap = document.getElementById("minimap");
@@ -111,7 +131,7 @@ $(document).ready(function() {
   //minimap.width =  (mapWidth * 2 + 1);
 
   for (j = -mapHeight; j <= mapHeight; j++){
-    for (i = -mapHeight; i <= mapWidth; i++){
+    for (i = -mapWidth; i <= mapWidth; i++){
       ctxmini.fillStyle = biomes[mapInfo[j][i]].floorColor;
       ctxmini.fillRect(i + mapWidth,j + mapHeight, 1,1)
     }
@@ -184,12 +204,7 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
           } else {
             ctx.fillStyle = "#3876EC";
           }
-
           ctx.fillRect(camera.x + (i * tileSize), camera.y + (j * tileSize), tileSize, tileSize);
-
-          // render noise
-
-          ctx.fillRect(camera.x + (i * tileSize) + (1 / tileSize), camera.y + (j * tileSize), 1, 1);
 
 
 //          ctx.fillStyle = "#000";
@@ -302,6 +317,19 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
       tileSize = minTileSize;
     }
   });
+
+  function createTree(x, y) { // creates a tree
+    ctx.fillStyle = "#00cc00"; // leafs
+    ctx.fillRect(x, y, tileSize / 4, tileSize / 4);
+    ctx.fillStyle = "#83450B"; // trunk
+    ctx.fillRect(x + tileSize / 12, y + tileSize / 12, tileSize / 12, tileSize / 12);
+  }
+
+  function randomSeed(seed, max) {
+      var x = Math.sin(seed++) * 10000;
+      var value = x - Math.floor(x);
+      return Math.floor(value * (max + 1));
+  }
 
   function randOffset(min, max, offset) {
       return rand(min + offset, max - offset);
