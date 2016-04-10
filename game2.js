@@ -3,6 +3,50 @@ $(document).ready(function() {
   var c = document.getElementById("map");
   var ctx = c.getContext("2d");
 
+  tileSize = 20 // zoom ammount
+  minTileSize = 10 // min zoom
+  maxTileSize = 40 // max zoom
+
+  fpsCount = 0;   // debug benchmark
+  fpsElapsed = new Date().getTime();
+
+  adjustScreen(); //set full page
+
+  dragMode = false
+
+  //Map size
+
+  mapHeight = 300;
+  mapWidth = 300;
+  mapSize = (mapWidth * 2 + 1) * (mapHeight * 2 + 1);
+
+  mapInfo = [] // map terrain information
+
+  camera = { // camera details
+    x: Math.floor(canvasWidth / 2),
+    y: Math.floor(canvasHeight / 2),
+    dx: 0,
+    dy: 0
+  }
+
+  viewport = {
+    x: {
+      begin: 0,
+      end: 0
+    },
+    y: {
+      begin: 0,
+      end: 0
+    }
+  }
+
+  mousePos = {
+    x: 0,
+    y: 0
+  }
+
+  var lastX, lastY,lastTile;
+
   biomes = [
           {
             name: "desert",
@@ -23,38 +67,17 @@ $(document).ready(function() {
             noiseAmmount: 0.001,
           }
         ];
-//  object : (xcoord,ycoord,xsubcoord,ysubcoord, objectType)
-  tileSize = 20 // zoom ammount
-  minTileSize = 10 // min zoom
-  maxTileSize = 40 // max zoom
 
-  fpsCount = 0;   // debug benchmark
-  fpsElapsed = new Date().getTime();
+  objects = [
+          {
+            name: "tree",
+            drawCall: drawTree
+          }
+        ];
 
-  adjustScreen(); //set full page
-
-  dragMode = false
-
-  //Map size
-
-  mapHeight = 100;
-  mapWidth = 100;
-  mapSize = (mapWidth * 2 + 1) * (mapHeight * 2 + 1);
-
-  mapInfo = [] // map terrain information
-
-  camera = { // camera details
-    x: Math.floor(canvasWidth / 2),
-    y: Math.floor(canvasHeight / 2),
-    dx: 0,
-    dy: 0
-  }
-
-  mousePos = {
-    x: 0,
-    y: 0
-  }
-
+  //  object : (xcoord,ycoord, objectType)
+  objectData = []
+  objectData.push([0,0,0])
 
 // World generation
   // Initialize world
@@ -72,7 +95,7 @@ $(document).ready(function() {
 
   queue = [];
   queueSize = 1;
-  queue.push([0,0,0]) // enforce center being solid
+  queue.push([0,0,1]) // enforce center being solid
   // Set first blocks
 
   for (j = 0; j <= Math.round(mapSize / 10000); j++){
@@ -124,20 +147,7 @@ $(document).ready(function() {
   console.log("S=" + shoots + " H=" + hit + " M=" + miss);
   // Minimap render
 
-  var minimap = document.getElementById("minimap");
-  var ctxmini = minimap.getContext("2d");
-
-  //minimap.height = (mapHeight * 2 + 1);
-  //minimap.width =  (mapWidth * 2 + 1);
-
-  for (j = -mapHeight; j <= mapHeight; j++){
-    for (i = -mapWidth; i <= mapWidth; i++){
-      ctxmini.fillStyle = biomes[mapInfo[j][i]].floorColor;
-      ctxmini.fillRect(i + mapWidth,j + mapHeight, 1,1)
-    }
-  }
-
-console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000 +"s");
+  console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000 +"s");
 
 // Fps draw
 
@@ -145,15 +155,25 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
 
     function render() {// frame update
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      adjustScreen(); // reset screen size
+      //adjustScreen(); // reset screen size
       adjustCamera(); // handles camera movements and boundaries
       drawTerrain(); // draw the terrain
+      drawObjects();
       debug(); // run debug info
     }
 
+    function drawObjects() {
+
+    }
+
     function adjustCamera() {
+      // Move camera
+
       camera.x += camera.dx
       camera.y += camera.dy
+
+      //Set boundaries
+
       if (camera.x > mapWidth * tileSize) {
         camera.x = mapWidth * tileSize;
       }
@@ -167,6 +187,18 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
       else if (camera.y < canvasHeight - (mapHeight + 1) * tileSize) {
         camera.y = canvasHeight - (mapHeight + 1) * tileSize;
       }
+
+      // Set viewport
+
+      viewport.x.begin = -Math.ceil(camera.x / tileSize);
+      viewport.x.end = viewport.x.begin + Math.ceil(canvasWidth / tileSize) + 1;
+      viewport.x.center = (viewport.x.end - viewport.x.begin) / 2 + viewport.x.begin;
+
+
+      viewport.y.begin = -Math.ceil(camera.y / tileSize);
+      viewport.y.end = viewport.y.begin + Math.ceil(canvasHeight / tileSize) + 2;
+      viewport.y.center = (viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin;
+
     }
 
     function debug() {
@@ -189,15 +221,13 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
 
       drawCalls = 0
 
-      startx = -Math.floor(camera.x / tileSize) - 1;
-      endx = startx + Math.floor(canvasWidth / tileSize) + 2;
-
-      starty = -Math.floor(camera.y / tileSize) - 1;
-      endy = starty + Math.floor(canvasHeight / tileSize) + 2;
+//      if (camera.x == lastX && camera.y == lastY && lastTile == tileSize){
+//        return;
+//      }
 
       // terrain rendering
-      for (j = starty; j < endy; j++){
-        for (i = startx; i < endx; i++){
+      for (j = viewport.y.begin; j < viewport.y.end; j++){
+        for (i = viewport.x.begin; i < viewport.x.end; i++){
 
           if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
             ctx.fillStyle = biomes[mapInfo[j][i]].floorColor;
@@ -205,19 +235,20 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
             ctx.fillStyle = "#3876EC";
           }
           ctx.fillRect(camera.x + (i * tileSize), camera.y + (j * tileSize), tileSize, tileSize);
-
-
-//          ctx.fillStyle = "#000";
-//          ctx.fillText("x:" + i + ", y:" + j,camera.x + (i * tileSize) + 10,camera.y + (j * tileSize) + 20) + 10;
-
           drawCalls += 1
+//        ctx.fillStyle = "#000";
+//        ctx.fillText("x:" + i + ", y:" + j,camera.x + (i * tileSize) + 10,camera.y + (j * tileSize) + 20) + 10;
         }
       }
+
+//      lastX = camera.x;
+//      lastY = camera.y;
+//      lastTile = tileSize;
 
     }
 
     //Resize screen and set render size
-    //$(window).resize(adjustScreen);
+    $(window).resize(adjustScreen);
     function adjustScreen(){
       canvasHeight = c.height = window.innerHeight;
       canvasWidth = c.width = window.innerWidth;
@@ -318,11 +349,11 @@ console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000
     }
   });
 
-  function createTree(x, y) { // creates a tree
+  function drawTree(x, y) { // creates a tree
     ctx.fillStyle = "#00cc00"; // leafs
-    ctx.fillRect(x, y, tileSize / 4, tileSize / 4);
+    ctx.fillRect(x, y, tileSize, tileSize);
     ctx.fillStyle = "#83450B"; // trunk
-    ctx.fillRect(x + tileSize / 12, y + tileSize / 12, tileSize / 12, tileSize / 12);
+    ctx.fillRect(x + tileSize / 3, y + tileSize / 3, tileSize / 3, tileSize / 3);
   }
 
   function randomSeed(seed, max) {
