@@ -26,6 +26,7 @@
 #map{
   margin: 0 auto;
   display: block;
+  cursor: default;
 }
 
 #minimap{
@@ -45,5 +46,5 @@
 }
 
 .move{
-  cursor: move;
+  cursor: move !important;
 }

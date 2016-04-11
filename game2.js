@@ -68,7 +68,7 @@ $(document).ready(function() {
           }
         ];
 
-  objects = [
+  objectData = [
           {
             name: "tree",
             drawCall: drawTree
@@ -76,8 +76,7 @@ $(document).ready(function() {
         ];
 
   //  object : (xcoord,ycoord, objectType)
-  objectData = []
-  objectData.push([0,0,0])
+  objects = []
 
 // World generation
   // Initialize world
@@ -163,7 +162,19 @@ $(document).ready(function() {
     }
 
     function drawObjects() {
+      // check objects within viewport;
 
+      for(i = 0; i < objects.length; i++){ // interate trough every object and find those on viewport
+        obj = objects[i]
+        objX = obj[0]
+        objY = obj[1]
+        ObjType = obj[2]
+
+        if (objX < viewport.x.end && objX > viewport.x.begin && objY < viewport.y.end && objY > viewport.x.begin){
+          objectData[ObjType].drawCall(objX, objY);
+        }
+      }
+      // draw each one of them!;
     }
 
     function adjustCamera() {
@@ -191,12 +202,12 @@ $(document).ready(function() {
       // Set viewport
 
       viewport.x.begin = -Math.ceil(camera.x / tileSize);
-      viewport.x.end = viewport.x.begin + Math.ceil(canvasWidth / tileSize) + 1;
+      viewport.x.end = viewport.x.begin + Math.ceil(canvasWidth / tileSize);
       viewport.x.center = (viewport.x.end - viewport.x.begin) / 2 + viewport.x.begin;
 
 
       viewport.y.begin = -Math.ceil(camera.y / tileSize);
-      viewport.y.end = viewport.y.begin + Math.ceil(canvasHeight / tileSize) + 2;
+      viewport.y.end = viewport.y.begin + Math.ceil(canvasHeight / tileSize);
       viewport.y.center = (viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin;
 
     }
@@ -213,7 +224,7 @@ $(document).ready(function() {
         fpsCount = 0;
       }
 
-      $("#debug-cursor").text("Cursor: x ="+ Math.floor(-(camera.x / tileSize) + (mousePos.x / tileSize)) + " y=" + Math.floor(-(camera.y / tileSize) + (mousePos.y / tileSize)));
+      $("#debug-cursor").text("Cursor: x ="+ Math.floor((mousePos.x - camera.x) / tileSize) + " y=" + Math.floor((mousePos.y - camera.y) / tileSize));
 
     }
 
@@ -226,8 +237,8 @@ $(document).ready(function() {
       drawCalls = 0
 
       // terrain rendering
-      for (j = viewport.y.begin; j < viewport.y.end; j++){
-        for (i = viewport.x.begin; i < viewport.x.end; i++){
+      for (j = viewport.y.begin; j <= viewport.y.end; j++){
+        for (i = viewport.x.begin; i <= viewport.x.end; i++){
 
           if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
             tileColor = biomes[mapInfo[j][i]].floorColor;
@@ -246,7 +257,7 @@ $(document).ready(function() {
             drawCalls += 1 // increase drawcall;
           }
 
-          if (i == (viewport.x.end - 1)){ // last pixel
+          if (i == (viewport.x.end)){ // last pixel
             ctx.fillStyle = previousColor;
             ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
             previousColor = colorStreak = streakStart = undefined;
@@ -359,11 +370,16 @@ $(document).ready(function() {
     }
   });
 
-  function drawTree(x, y) { // creates a tree
+  function drawTree(xPos, yPos) { // creates a tree
+
+    x = xPos * tileSize + camera.x;
+    y = yPos * tileSize + camera.y;
+
     ctx.fillStyle = "#00cc00"; // leafs
     ctx.fillRect(x, y, tileSize, tileSize);
     ctx.fillStyle = "#83450B"; // trunk
     ctx.fillRect(x + tileSize / 3, y + tileSize / 3, tileSize / 3, tileSize / 3);
+
   }
 
   function randomSeed(seed, max) {
