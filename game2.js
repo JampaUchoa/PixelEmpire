@@ -89,12 +89,10 @@ $(document).ready(function() {
     }
   }
 
-  console.log("eee");
-  // Create biomes
-
+// Create biomes
   queue = [];
   queueSize = 1;
-  queue.push([0,0,1]) // enforce center being solid
+  queue.push([0,0,1]) // enforce center being solid forest
   // Set first blocks
 
   for (j = 0; j <= Math.round(mapSize / 10000); j++){
@@ -113,9 +111,9 @@ $(document).ready(function() {
     if (tile == undefined){
       break;
     }
-    x = tile[0];
-    y = tile[1];
-    biome = tile[2];
+    var x = tile[0];
+    var y = tile[1];
+    var biome = tile[2];
 
     if (mapInfo[y][x] != -1){
       miss +=1
@@ -129,11 +127,6 @@ $(document).ready(function() {
     queueTest(x - 1, y, biome)
     queueTest(x, y + 1, biome)
     queueTest(x, y - 1, biome)
-
-  //  queue.push([x + 1, y, biome]);
-  //  queue.push([x - 1, y, biome]);
-  //  queue.push([x, y + 1, biome]);
-  //  queue.push([x, y - 1, biome]);
 
   }
 
@@ -160,6 +153,7 @@ $(document).ready(function() {
       drawObjects();
       debug(); // run debug info
     }
+
 
     function drawObjects() {
       // check objects within viewport;
@@ -203,12 +197,11 @@ $(document).ready(function() {
 
       viewport.x.begin = -Math.ceil(camera.x / tileSize);
       viewport.x.end = viewport.x.begin + Math.ceil(canvasWidth / tileSize);
-      viewport.x.center = (viewport.x.end - viewport.x.begin) / 2 + viewport.x.begin;
-
+      viewport.x.center = Math.round((viewport.x.end - viewport.x.begin) / 2 + viewport.x.begin);
 
       viewport.y.begin = -Math.ceil(camera.y / tileSize);
       viewport.y.end = viewport.y.begin + Math.ceil(canvasHeight / tileSize);
-      viewport.y.center = (viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin;
+      viewport.y.center = Math.round((viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin);
 
     }
 
@@ -268,6 +261,29 @@ $(document).ready(function() {
 
     }
 
+    function drawMinimap() { //LAGGY
+      var cmini = document.getElementById("minimap");
+      var ctxmini = cmini.getContext("2d");
+
+      var x = 0;
+      var y = 0;
+
+      for (j = viewport.y.center - 100; j <= viewport.y.center + 100; j++){
+        for (i = viewport.x.center - 100; i <= viewport.x.center + 100; i++){
+          if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
+            tileColor = biomes[mapInfo[j][i]].floorColor;
+          } else {
+            tileColor = "#3876EC";
+          }
+          ctxmini.fillStyle = tileColor;
+          ctxmini.fillRect(x, y, 1, 1); // render row of prevous pixels
+          x += 1;
+        }
+        x = 0;
+        y += 1;
+      }
+    }
+
     //Resize screen and set render size
     $(window).resize(adjustScreen);
     function adjustScreen(){
@@ -309,12 +325,12 @@ $(document).ready(function() {
       }
     }, false);
 
-  function clickDrag(mousePos){
+    function clickDrag(mousePos){
       camera.x += mousePos.x - dragX;
       dragX = mousePos.x;
       camera.y += mousePos.y - dragY;
       dragY = mousePos.y;
-  }
+    }
 
   //Middle click drag
 
@@ -372,8 +388,8 @@ $(document).ready(function() {
 
   function drawTree(xPos, yPos) { // creates a tree
 
-    x = xPos * tileSize + camera.x;
-    y = yPos * tileSize + camera.y;
+    var x = xPos * tileSize + camera.x;
+    var y = yPos * tileSize + camera.y;
 
     ctx.fillStyle = "#00cc00"; // leafs
     ctx.fillRect(x, y, tileSize, tileSize);
