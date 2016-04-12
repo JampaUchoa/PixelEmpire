@@ -20,7 +20,8 @@ $(document).ready(function() {
   mapWidth = 300;
   mapSize = (mapWidth * 2 + 1) * (mapHeight * 2 + 1);
 
-  mapInfo = [] // map terrain information
+  mapTerrain = [] // map terrain information
+  mapObjects = [] // map object information
 
   camera = { // camera details
     x: Math.floor(canvasWidth / 2),
@@ -45,20 +46,18 @@ $(document).ready(function() {
     y: 0
   }
 
-  var lastX, lastY,lastTile;
-
-  biomes = [
-          {
-            name: "desert",
-            floorColor: "#F6CF87",
-            noiseColor: "#EBB754",
-            noiseAmmount: 0.05,
-          },
+  terrainData = [
           {
             name: "forest",
             floorColor: "#4CAF50",
             noiseColor: "#067D0A",
             noiseAmmount: 0.001,
+          },
+          {
+            name: "desert",
+            floorColor: "#F6CF87",
+            noiseColor: "#EBB754",
+            noiseAmmount: 0.05,
           },
           {
             name: "ocean",
@@ -72,35 +71,38 @@ $(document).ready(function() {
           {
             name: "tree",
             drawCall: drawTree
+          },
+          {
+            name: "hut",
+            drawCall: drawHut
           }
         ];
-
-  //  object : (xcoord,ycoord, objectType)
-  objects = []
 
 // World generation
   // Initialize world
   worldGenStart = new Date().getTime();
 
   for (j = -mapHeight; j <= mapHeight; j++){
-    mapInfo[j] = []
+    mapTerrain[j] = []
+    mapObjects[j] = []
     for (i = -mapHeight; i <= mapWidth; i++){
-      mapInfo[j][i] = -1
+      mapTerrain[j][i] = -1
+      mapObjects[j][i] = -1
     }
   }
 
-// Create biomes
+  // Create terrainData
   queue = [];
   queueSize = 1;
-  queue.push([0,0,1]) // enforce center being solid forest
-  // Set first blocks
+  queue.push([0,0,0]) // enforce spawn area being a forest
 
+  // Set up seed blocks
   for (j = 0; j <= Math.round(mapSize / 10000); j++){
-    queue.push([rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), rand(0,biomes.length - 1)]);
+    queue.push([rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), rand(0,terrainData.length - 1)]);
     queueSize += 1
   }
 
-  // Process world - Biome creation
+  // Spread the blocks to make biomes
   shoots = 0
   hit = 0
   miss = 0
@@ -115,13 +117,13 @@ $(document).ready(function() {
     var y = tile[1];
     var biome = tile[2];
 
-    if (mapInfo[y][x] != -1){
+    if (mapTerrain[y][x] != -1){
       miss +=1
       continue;
     }
 
     hit += 1
-    mapInfo[y][x] = biome;
+    mapTerrain[y][x] = biome;
 
     queueTest(x + 1, y, biome)
     queueTest(x - 1, y, biome)
@@ -130,19 +132,17 @@ $(document).ready(function() {
 
   }
 
-  function queueTest(x, y, biome){
-    if (!(x > mapWidth || y > mapHeight || y < -mapHeight || x < -mapWidth || mapInfo[y][x] != -1)){
+  function queueTest(x, y, biome){ // check if legal and untouched
+    if (!(x > mapWidth || y > mapHeight || y < -mapHeight || x < -mapWidth || mapTerrain[y][x] != -1)){
       queue.push([x, y, biome]);
     }
   }
 
+  // Debug info
   console.log("S=" + shoots + " H=" + hit + " M=" + miss);
-  // Minimap render
-
   console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000 +"s");
 
-// Fps draw
-
+  // Fps draw
   setInterval(render, 16);
 
     function render() {// frame update
@@ -154,22 +154,6 @@ $(document).ready(function() {
       debug(); // run debug info
     }
 
-
-    function drawObjects() {
-      // check objects within viewport;
-
-      for(i = 0; i < objects.length; i++){ // interate trough every object and find those on viewport
-        obj = objects[i]
-        objX = obj[0]
-        objY = obj[1]
-        ObjType = obj[2]
-
-        if (objX < viewport.x.end && objX > viewport.x.begin && objY < viewport.y.end && objY > viewport.x.begin){
-          objectData[ObjType].drawCall(objX, objY);
-        }
-      }
-      // draw each one of them!;
-    }
 
     function adjustCamera() {
       // Move camera
@@ -208,7 +192,6 @@ $(document).ready(function() {
     function debug() {
       $("#debug-draw").text("Draw Calls: "+ drawCalls);
       $("#debug-camera").text("Camera: x ="+ camera.x + " y=" + camera.y);
-  //    canvasHeight = c.height = window.innerHeight;
       fpsCount += 1
       if (fpsCount == 62){
         fpsBenchamrk = Math.round(60000 / (new Date().getTime() - fpsElapsed));
@@ -233,8 +216,10 @@ $(document).ready(function() {
       for (j = viewport.y.begin; j <= viewport.y.end; j++){
         for (i = viewport.x.begin; i <= viewport.x.end; i++){
 
+          // Terrain drawing
+
           if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
-            tileColor = biomes[mapInfo[j][i]].floorColor;
+            tileColor = terrainData[mapTerrain[j][i]].floorColor;
           } else {
             tileColor = "#3876EC";
           }
@@ -242,19 +227,21 @@ $(document).ready(function() {
           if (tileColor == previousColor){ // this pixel is equal to prevous pixel
             colorStreak += 1; // Add to the streak
           } else {// this is a new pixel
-            ctx.fillStyle = previousColor;
+            ctx.fillStyle = previousColor; // set the color
             ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
             colorStreak = 1; // Initialize a new streak
             streakStart = i; // start here
             previousColor = tileColor;
-            drawCalls += 1 // increase drawcall;
+            drawCalls += 1 // increase drawcall (debug);
           }
 
           if (i == (viewport.x.end)){ // last pixel
             ctx.fillStyle = previousColor;
             ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
-            previousColor = colorStreak = streakStart = undefined;
+            previousColor = colorStreak = streakStart = undefined; // reset info
           }
+
+
 
         }
       }
@@ -271,7 +258,7 @@ $(document).ready(function() {
       for (j = viewport.y.center - 100; j <= viewport.y.center + 100; j++){
         for (i = viewport.x.center - 100; i <= viewport.x.center + 100; i++){
           if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
-            tileColor = biomes[mapInfo[j][i]].floorColor;
+            tileColor = terrainData[mapTerrain[j][i]].floorColor;
           } else {
             tileColor = "#3876EC";
           }
@@ -385,18 +372,6 @@ $(document).ready(function() {
       tileSize = minTileSize;
     }
   });
-
-  function drawTree(xPos, yPos) { // creates a tree
-
-    var x = xPos * tileSize + camera.x;
-    var y = yPos * tileSize + camera.y;
-
-    ctx.fillStyle = "#00cc00"; // leafs
-    ctx.fillRect(x, y, tileSize, tileSize);
-    ctx.fillStyle = "#83450B"; // trunk
-    ctx.fillRect(x + tileSize / 3, y + tileSize / 3, tileSize / 3, tileSize / 3);
-
-  }
 
   function randomSeed(seed, max) {
       var x = Math.sin(seed++) * 10000;
