@@ -1,7 +1,7 @@
 $(document).ready(function() {
 
-  var c = document.getElementById("map");
-  var ctx = c.getContext("2d");
+  c = document.getElementById("map");
+  ctx = c.getContext("2d");
 
   tileSize = 20 // zoom ammount
   minTileSize = 10 // min zoom
@@ -83,11 +83,11 @@ $(document).ready(function() {
   worldGenStart = new Date().getTime();
 
   for (j = -mapHeight; j <= mapHeight; j++){
-    mapTerrain[j] = []
-    mapObjects[j] = []
+    mapTerrain[j] = [];
+    mapObjects[j] = [];
     for (i = -mapHeight; i <= mapWidth; i++){
-      mapTerrain[j][i] = -1
-      mapObjects[j][i] = -1
+      mapTerrain[j][i] = -1;
+      mapObjects[j][i] = -1;
     }
   }
 
@@ -147,10 +147,8 @@ $(document).ready(function() {
 
     function render() {// frame update
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      //adjustScreen(); // reset screen size
       adjustCamera(); // handles camera movements and boundaries
       drawTerrain(); // draw the terrain
-      drawObjects();
       debug(); // run debug info
     }
 
@@ -216,36 +214,42 @@ $(document).ready(function() {
       for (j = viewport.y.begin; j <= viewport.y.end; j++){
         for (i = viewport.x.begin; i <= viewport.x.end; i++){
 
-          // Terrain drawing
+          if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){ // If legal
 
-          if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
+            // Terrain draw
+            ctx.globalCompositeOperation = "destination-over";
+
             tileColor = terrainData[mapTerrain[j][i]].floorColor;
-          } else {
-            tileColor = "#3876EC";
-          }
+            if (tileColor == previousColor){ // this pixel is equal to prevous pixel
+              colorStreak += 1; // Add to the streak
+            } else {// this is a new pixel
+              ctx.fillStyle = previousColor; // set the color
+              ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
+              colorStreak = 1; // Initialize a new streak
+              streakStart = i; // start here
+              previousColor = tileColor;
+              drawCalls += 1 // increase drawcall (debug);
+            }
 
-          if (tileColor == previousColor){ // this pixel is equal to prevous pixel
-            colorStreak += 1; // Add to the streak
-          } else {// this is a new pixel
-            ctx.fillStyle = previousColor; // set the color
-            ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
-            colorStreak = 1; // Initialize a new streak
-            streakStart = i; // start here
-            previousColor = tileColor;
-            drawCalls += 1 // increase drawcall (debug);
-          }
+            if (mapObjects[j][i] != -1){
+              //Set relative rendering positioning
+              ctx.globalCompositeOperation = "source-over";
+              var x = i * tileSize + camera.x;
+              var y = j * tileSize + camera.y;
+              objectData[mapObjects[j][i]].drawCall(x, y);
+            }
 
-          if (i == (viewport.x.end)){ // last pixel
+          }
+          if (i == (viewport.x.end)){
+            // Closing terrain drawing
+            ctx.globalCompositeOperation = "destination-over";
             ctx.fillStyle = previousColor;
             ctx.fillRect(camera.x + (streakStart * tileSize), camera.y + (j * tileSize), colorStreak * tileSize, tileSize); // render row of prevous pixels
             previousColor = colorStreak = streakStart = undefined; // reset info
           }
-
-
-
         }
       }
-
+      ctx.globalCompositeOperation = "source-over";
     }
 
     function drawMinimap() { //LAGGY
@@ -372,6 +376,16 @@ $(document).ready(function() {
       tileSize = minTileSize;
     }
   });
+
+
+  function drawTree(x, y) { // creates a tree
+
+    ctx.fillStyle = "#00cc00"; // leafs
+    ctx.fillRect(x, y, tileSize, tileSize);
+    ctx.fillStyle = "#83450B"; // trunk
+    ctx.fillRect(x + tileSize / 3, y + tileSize / 3, tileSize / 3, tileSize / 3);
+  }
+
 
   function randomSeed(seed, max) {
       var x = Math.sin(seed++) * 10000;
