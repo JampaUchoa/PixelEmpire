@@ -2,12 +2,29 @@
   <head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
-    <script src="./game2.js"></script>
     <script src="./objects.js"></script>
+    <script src="./game2.js"></script>
+    <script src="./logic.js"></script>
     <link href="./normalize.css" rel="stylesheet" type="text/css">
     <link href="./game.css" rel="stylesheet" type="text/css">
   </head>
   <body>
+    <div class="stats-hud">
+      <div class="stats">
+        <div class="sub-stat">
+          Population: <span id="year"> 0 </span>
+        </div>
+        <div class="sub-stat">
+          Population: <span id="population"> 0 </span>
+        </div>
+        <div class="sub-stat">
+          Population: <span id="food"> 0 </span>
+        </div>
+        <div class="sub-stat">
+          Population: <span id="gold"> 0 </span>
+        </div>
+      </div>
+    </div>
     <canvas id="map" width="200" height="200">
     </canvas>
     <canvas id="minimap" class="hud hidden" width="200" height="200">
@@ -17,7 +34,6 @@
       <div id="debug-camera"> Camera </div>
       <div id="debug-fps"> FPS:  </div>
       <div id="debug-cursor"> Cursor at:  </div>
-
     </div>
   </body>
 <html>

@@ -10,7 +10,8 @@
 
 .debug{
   position: absolute;
-  top: 0;
+  display: none;
+  bottom: 0;
   width: 100%;
   background-color: rgba(7, 7, 7, 0.75);
   padding: 11px 0;
@@ -22,6 +23,22 @@
   padding: 0 5px;
 }
 
+.stats-hud{
+  position: absolute;
+  top: 0;
+  width: 100%;
+  background-color: rgba(7, 7, 7, 0.75);
+  padding: 11px 0;
+  color: white;
+}
+
+.stats{
+  width: 90%;
+  margin: 0 auto;
+}
+.sub-stat{
+  display: inline-block;
+}
 
 #map{
   margin: 0 auto;

@@ -1,0 +1,71 @@
+No training - just desire
+Rock Thrower |==============||====|
+Club Man     |====||==============|
+
+Uncategorized tech:
+
+  Cartography: Adds a black and white minimap.
+  Compass: Makes minimap dynamic.
+  Satellite: makes minimap Full Resolution.
+
+  Gregorian calendar: Farm rate increases +50%, changes calendar UI.
+  
+
+Resources:
+  Main:
+    Food:
+      Sources:
+        Food Farms
+        Animal Farm
+        Fishing
+        Wild Animal
+      Stats:
+        + Population
+        + Happiness
+        - Revolution
+    Metal:
+      Sources:
+        Gold mines
+        Siver mines
+        Copper mines
+        Bronze mines
+        Trading
+      Stats:
+        + Influence
+        Upgrade Stuff
+    Energy: # - Industrial age only!
+      Sources:
+        Power plant
+        Hydro plant
+        Solar plant
+        Nuclear plant
+      Stats:
+        + Happiness
+        Necessary for upgrade and population increase
+
+
+Ages:
+  Rock age:
+    Traits:
+    Description: First age of the game
+    Technology:
+      Fire:
+        Increase food collected from animals
+    Units:
+      Scouts:
+        -
+      Transport:
+        -
+      Melee:
+        Club man
+      Ranged:
+        Rock thrower
+    Buildings:
+      Huts: Increase Population
+      Farms: Produces Food
+    Enemies:
+      Wild animals
+      Other tribes
+
+  Stone age:
+    Traits:

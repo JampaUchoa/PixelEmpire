@@ -13,6 +13,7 @@ $(document).ready(function() {
   adjustScreen(); //set full page
 
   dragMode = false
+  placementMode = 0
 
   //Map size
 
@@ -43,7 +44,9 @@ $(document).ready(function() {
 
   mousePos = {
     x: 0,
-    y: 0
+    y: 0,
+    absX: 0,
+    absY: 0
   }
 
   terrainData = [
@@ -67,17 +70,6 @@ $(document).ready(function() {
           }
         ];
 
-  objectData = [
-          {
-            name: "tree",
-            drawCall: drawTree
-          },
-          {
-            name: "hut",
-            drawCall: drawHut
-          }
-        ];
-
 // World generation
   // Initialize world
   worldGenStart = new Date().getTime();
@@ -93,13 +85,11 @@ $(document).ready(function() {
 
   // Create terrainData
   queue = [];
-  queueSize = 1;
   queue.push([0,0,0]) // enforce spawn area being a forest
 
   // Set up seed blocks
   for (j = 0; j <= Math.round(mapSize / 10000); j++){
     queue.push([rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), rand(0,terrainData.length - 1)]);
-    queueSize += 1
   }
 
   // Spread the blocks to make biomes
@@ -125,6 +115,10 @@ $(document).ready(function() {
     hit += 1
     mapTerrain[y][x] = biome;
 
+    if (biome == 0 && Math.random() > 0.99){
+      mapObjects[y][x] = 0;
+    }
+
     queueTest(x + 1, y, biome)
     queueTest(x - 1, y, biome)
     queueTest(x, y + 1, biome)
@@ -142,48 +136,54 @@ $(document).ready(function() {
   console.log("S=" + shoots + " H=" + hit + " M=" + miss);
   console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000 +"s");
 
+  // Game Initialize
+
+  mapObjects[5][5] = mapObjects[-5][5] = mapObjects[5][-5] = mapObjects[-5][-5] = 1;
+
   // Fps draw
   setInterval(render, 16);
 
-    function render() {// frame update
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      adjustCamera(); // handles camera movements and boundaries
-      drawTerrain(); // draw the terrain
-      debug(); // run debug info
+  function render() {// frame update
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    adjustCamera(); // handles camera movements and boundaries
+    drawTerrain(); // draw the terrain
+    debug(); // run debug info
+  }
+
+  function adjustCamera() {
+    // Move camera
+    camera.x += camera.dx
+    camera.y += camera.dy
+    //Set boundaries
+    if (camera.x > mapWidth * tileSize) {
+      camera.x = mapWidth * tileSize;
+    }
+    else if (camera.x < canvasWidth - (mapWidth + 1) * tileSize) {
+      camera.x = canvasWidth - (mapWidth + 1) * tileSize;
     }
 
+    if (camera.y > mapHeight * tileSize) {
+      camera.y = mapHeight * tileSize;
+    }
+    else if (camera.y < canvasHeight - (mapHeight + 1) * tileSize) {
+      camera.y = canvasHeight - (mapHeight + 1) * tileSize;
+    }
 
-    function adjustCamera() {
-      // Move camera
+    // Set viewport
+    viewport.x.begin = -Math.ceil(camera.x / tileSize);
+    viewport.x.end = viewport.x.begin + Math.ceil(canvasWidth / tileSize);
+    viewport.x.center = Math.round((viewport.x.end - viewport.x.begin) / 2 + viewport.x.begin);
 
-      camera.x += camera.dx
-      camera.y += camera.dy
+    viewport.y.begin = -Math.ceil(camera.y / tileSize);
+    viewport.y.end = viewport.y.begin + Math.ceil(canvasHeight / tileSize);
+    viewport.y.center = Math.round((viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin);
 
-      //Set boundaries
+    if (placementMode){
+      var x = mousePos.absX * tileSize + camera.x;
+      var y = mousePos.absY * tileSize + camera.y;
 
-      if (camera.x > mapWidth * tileSize) {
-        camera.x = mapWidth * tileSize;
-      }
-      else if (camera.x < canvasWidth - (mapWidth + 1) * tileSize) {
-        camera.x = canvasWidth - (mapWidth + 1) * tileSize;
-      }
-
-      if (camera.y > mapHeight * tileSize) {
-        camera.y = mapHeight * tileSize;
-      }
-      else if (camera.y < canvasHeight - (mapHeight + 1) * tileSize) {
-        camera.y = canvasHeight - (mapHeight + 1) * tileSize;
-      }
-
-      // Set viewport
-
-      viewport.x.begin = -Math.ceil(camera.x / tileSize);
-      viewport.x.end = viewport.x.begin + Math.ceil(canvasWidth / tileSize);
-      viewport.x.center = Math.round((viewport.x.end - viewport.x.begin) / 2 + viewport.x.begin);
-
-      viewport.y.begin = -Math.ceil(camera.y / tileSize);
-      viewport.y.end = viewport.y.begin + Math.ceil(canvasHeight / tileSize);
-      viewport.y.center = Math.round((viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin);
+      objectData[placementMode].drawCall(x, y);
+    }
 
     }
 
@@ -197,28 +197,21 @@ $(document).ready(function() {
         fpsElapsed = new Date().getTime();
         fpsCount = 0;
       }
-
-      $("#debug-cursor").text("Cursor: x ="+ Math.floor((mousePos.x - camera.x) / tileSize) + " y=" + Math.floor((mousePos.y - camera.y) / tileSize));
-
+      $("#debug-cursor").text("Cursor: x ="+ mousePos.absX + " y=" + mousePos.absY);
     }
 
     function drawTerrain() {
-
       var previousColor;
       var colorStreak;
       var streakStart;
-
       drawCalls = 0
-
       // terrain rendering
       for (j = viewport.y.begin; j <= viewport.y.end; j++){
         for (i = viewport.x.begin; i <= viewport.x.end; i++){
-
           if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){ // If legal
 
             // Terrain draw
             ctx.globalCompositeOperation = "destination-over";
-
             tileColor = terrainData[mapTerrain[j][i]].floorColor;
             if (tileColor == previousColor){ // this pixel is equal to prevous pixel
               colorStreak += 1; // Add to the streak
@@ -252,80 +245,85 @@ $(document).ready(function() {
       ctx.globalCompositeOperation = "source-over";
     }
 
-    function drawMinimap() { //LAGGY
-      var cmini = document.getElementById("minimap");
-      var ctxmini = cmini.getContext("2d");
+  function drawMinimap() { //LAGGY
+    var cmini = document.getElementById("minimap");
+    var ctxmini = cmini.getContext("2d");
+    var x = 0;
+    var y = 0;
 
-      var x = 0;
-      var y = 0;
-
-      for (j = viewport.y.center - 100; j <= viewport.y.center + 100; j++){
-        for (i = viewport.x.center - 100; i <= viewport.x.center + 100; i++){
-          if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
-            tileColor = terrainData[mapTerrain[j][i]].floorColor;
-          } else {
-            tileColor = "#3876EC";
-          }
-          ctxmini.fillStyle = tileColor;
-          ctxmini.fillRect(x, y, 1, 1); // render row of prevous pixels
-          x += 1;
+    for (j = viewport.y.center - 100; j <= viewport.y.center + 100; j++){
+      for (i = viewport.x.center - 100; i <= viewport.x.center + 100; i++){
+        if (j <= mapHeight && j >= -mapHeight && i <= mapWidth && i >= -mapWidth){
+          tileColor = terrainData[mapTerrain[j][i]].floorColor;
+        } else {
+          tileColor = "#3876EC";
         }
-        x = 0;
-        y += 1;
+        ctxmini.fillStyle = tileColor;
+        ctxmini.fillRect(x, y, 1, 1); // render row of prevous pixels
+        x += 1;
       }
+      x = 0;
+      y += 1;
     }
+  }
 
     //Resize screen and set render size
-    $(window).resize(adjustScreen);
-    function adjustScreen(){
-      canvasHeight = c.height = window.innerHeight;
-      canvasWidth = c.width = window.innerWidth;
-      canvasSize = canvasHeight * canvasWidth;
-      yTiles = Math.floor(canvasHeight / tileSize);
-      xTiles = Math.floor(canvasWidth  / tileSize);
-    }
+  $(window).resize(adjustScreen);
+  function adjustScreen(){
+    canvasHeight = c.height = window.innerHeight;
+    canvasWidth = c.width = window.innerWidth;
+    canvasSize = canvasHeight * canvasWidth;
+    yTiles = Math.floor(canvasHeight / tileSize);
+    xTiles = Math.floor(canvasWidth  / tileSize);
+  }
 
     // Touch controls
 
-    c.addEventListener('touchstart', function(evt){
-      dragMode = true;
-      dragX = Math.round(evt.changedTouches[0].pageX);
-      dragY = Math.round(evt.changedTouches[0].pageY);
-      console.log("s");
-    }, false);
+  c.addEventListener('touchstart', function(evt){
+    dragMode = true;
+    dragX = Math.round(evt.changedTouches[0].pageX);
+    dragY = Math.round(evt.changedTouches[0].pageY);
+    console.log("s");
+  }, false);
 
-    c.addEventListener('touchmove', function(evt){
-      var rect = c.getBoundingClientRect();
-      mousePos.x = Math.round(evt.changedTouches[0].pageX - rect.left),
-      mousePos.y = Math.round(evt.changedTouches[0].pageY - rect.top)
-      clickDrag(mousePos)
-      console.log(mousePos);
-    }, false);
+  c.addEventListener('touchmove', function(evt){
+    var rect = c.getBoundingClientRect();
+    mousePos.x = Math.round(evt.changedTouches[0].pageX - rect.left),
+    mousePos.y = Math.round(evt.changedTouches[0].pageY - rect.top)
+    clickDrag(mousePos)
+    console.log(mousePos);
+  }, false);
 
     // Mouse operations
 
-    c.addEventListener('mousemove', function(evt) {
-      var rect = c.getBoundingClientRect();
-        mousePos.x = evt.clientX - rect.left,
-        mousePos.y = evt.clientY - rect.top
-      if (dragMode){
-        clickDrag(mousePos)
-      }
-      else {
-        edgePan(mousePos);
-      }
-    }, false);
-
-    function clickDrag(mousePos){
-      camera.x += mousePos.x - dragX;
-      dragX = mousePos.x;
-      camera.y += mousePos.y - dragY;
-      dragY = mousePos.y;
+  c.addEventListener('mousemove', function(evt) {
+    var rect = c.getBoundingClientRect();
+      mousePos.x = evt.clientX - rect.left;
+      mousePos.y = evt.clientY - rect.top;
+      mousePos.absX = Math.floor((mousePos.x - camera.x) / tileSize);
+      mousePos.absY = Math.floor((mousePos.y - camera.y) / tileSize);
+    if (dragMode){
+      clickDrag(mousePos)
     }
+    else {
+      //edgePan(mousePos);
+    }
+
+  }, false);
+
+  function clickDrag(mousePos){
+    camera.x += mousePos.x - dragX;
+    dragX = mousePos.x;
+    camera.y += mousePos.y - dragY;
+    dragY = mousePos.y;
+  }
 
   //Middle click drag
 
   $(c).on('mousedown', function(e) {
+    if( e.which == 1 ) {
+      createObject(mousePos.absX,mousePos.absY,0);
+    }
      if( e.which == 2 ) {
         e.preventDefault();
         dragMode = true;
@@ -376,15 +374,6 @@ $(document).ready(function() {
       tileSize = minTileSize;
     }
   });
-
-
-  function drawTree(x, y) { // creates a tree
-
-    ctx.fillStyle = "#00cc00"; // leafs
-    ctx.fillRect(x, y, tileSize, tileSize);
-    ctx.fillStyle = "#83450B"; // trunk
-    ctx.fillRect(x + tileSize / 3, y + tileSize / 3, tileSize / 3, tileSize / 3);
-  }
 
 
   function randomSeed(seed, max) {
