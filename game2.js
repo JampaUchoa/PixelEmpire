@@ -14,7 +14,7 @@ $(document).ready(function() {
 
   dragMode = false
   placementMode = 0
-
+  placementLegal = false
   //Map size
 
   mapHeight = 300;
@@ -119,6 +119,10 @@ $(document).ready(function() {
       mapObjects[y][x] = 0;
     }
 
+    if (biome != 2 && Math.random() > 0.999){
+      mapObjects[y][x] = 3;
+    }
+
     queueTest(x + 1, y, biome)
     queueTest(x - 1, y, biome)
     queueTest(x, y + 1, biome)
@@ -139,7 +143,7 @@ $(document).ready(function() {
   // Game Initialize
 
   mapObjects[5][5] = mapObjects[-5][5] = mapObjects[5][-5] = mapObjects[-5][-5] = 1;
-
+  mapObjects[-1][-1] = 2;
   // Fps draw
   setInterval(render, 16);
 
@@ -179,13 +183,22 @@ $(document).ready(function() {
     viewport.y.center = Math.round((viewport.y.end - viewport.y.begin) / 2 + viewport.y.begin);
 
     if (placementMode){
+      var objInfo = objectData[placementMode];
       var x = mousePos.absX * tileSize + camera.x;
       var y = mousePos.absY * tileSize + camera.y;
-
-      objectData[placementMode].drawCall(x, y);
+      objInfo.drawCall(x, y);
+      ctx.globalAlpha= 0.5;
+      ctx.globalCompositeOperation = "source-over";
+      if (placementLegal) {
+        ctx.fillStyle = "green";
+        ctx.fillRect(x, y, objInfo.sizeX * tileSize, objInfo.sizeY * tileSize);
+      } else {
+        ctx.fillStyle = "red";
+        ctx.fillRect(x, y, objInfo.sizeX * tileSize, objInfo.sizeY * tileSize);
+      }
+      ctx.globalAlpha= 1;
     }
-
-    }
+  }
 
     function debug() {
       $("#debug-draw").text("Draw Calls: "+ drawCalls);
@@ -224,11 +237,12 @@ $(document).ready(function() {
               drawCalls += 1 // increase drawcall (debug);
             }
 
-            if (mapObjects[j][i] != -1){
+            if (mapObjects[j][i] >=  0){
               //Set relative rendering positioning
-              ctx.globalCompositeOperation = "source-over";
+  //            ctx.globalCompositeOperation = "source-over";
               var x = i * tileSize + camera.x;
               var y = j * tileSize + camera.y;
+              console.log(mapObjects[j][i]);
               objectData[mapObjects[j][i]].drawCall(x, y);
             }
 
@@ -309,6 +323,20 @@ $(document).ready(function() {
       //edgePan(mousePos);
     }
 
+    if (placementMode){
+      var objInfo = objectData[placementMode]
+      placementLegal = true
+
+      for (j = mousePos.absY; j < mousePos.absY + objInfo.sizeY; j++){
+        for (i = mousePos.absX; i < mousePos.absX + objInfo.sizeX; i++){
+          if (mapObjects[j][i] != -1){
+            placementLegal = false;
+            break;
+          }
+        }
+      }
+    }
+
   }, false);
 
   function clickDrag(mousePos){
@@ -321,8 +349,8 @@ $(document).ready(function() {
   //Middle click drag
 
   $(c).on('mousedown', function(e) {
-    if( e.which == 1 ) {
-      createObject(mousePos.absX,mousePos.absY,0);
+    if(e.which == 1 && placementMode != 0 && placementLegal) {
+      createObject(mousePos.absX,mousePos.absY, placementMode);
     }
      if( e.which == 2 ) {
         e.preventDefault();
