@@ -4,7 +4,7 @@ $(document).ready(function() {
   ctx = c.getContext("2d");
 
   tileSize = 20 // zoom ammount
-  minTileSize = 10 // min zoom
+  minTileSize = 4 // min zoom
   maxTileSize = 40 // max zoom
 
   fpsCount = 0;   // debug benchmark
@@ -67,6 +67,12 @@ $(document).ready(function() {
             floorColor: "#0857D6",
             noiseColor: "#458DFF",
             noiseAmmount: 0.001,
+          },
+          {
+            name: "lake",
+            floorColor: "#0857D6",
+            noiseColor: "#458DFF",
+            noiseAmmount: 0.001,
           }
         ];
 
@@ -78,19 +84,51 @@ $(document).ready(function() {
     mapTerrain[j] = [];
     mapObjects[j] = [];
     for (i = -mapHeight; i <= mapWidth; i++){
-      mapTerrain[j][i] = -1;
+      mapTerrain[j][i] = 2;
       mapObjects[j][i] = -1;
     }
   }
 
+  falloff = 0.996;
+
+  seed(0,0,1);
+
+  // Set up seed blocks
+  for (j = 0; j <= Math.round(mapSize / 15000); j++){
+    seed(rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), 1);
+  }
+
+  function seed(x, y, probability) {
+    if (mapTerrain[y][x] == 2 && boundaryCheck(x, y)){
+      if (probability > Math.random()){
+        mapTerrain[y][x] = 0;
+        seed(x + 1, y, probability * falloff);
+        seed(x - 1, y, probability * falloff);
+        seed(x, y + 1, probability * falloff);
+        seed(x, y - 1, probability * falloff);
+
+        seed(x - 1, y - 1, probability * falloff);
+        seed(x + 1, y - 1, probability * falloff);
+        seed(x + 1, y + 1, probability * falloff);
+        seed(x - 1, y + 1, probability * falloff);
+
+      } else {
+        mapTerrain[y][x] = 1;
+      }
+    }
+
+  }
+
+  function boundaryCheck(x, y) {
+    return (x < mapWidth && y < mapHeight && y > -mapHeight && x > -mapWidth);
+  }
+
+/*
   // Create terrainData
   queue = [];
   queue.push([0,0,0]) // enforce spawn area being a forest
 
-  // Set up seed blocks
-  for (j = 0; j <= Math.round(mapSize / 10000); j++){
-    queue.push([rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), rand(0,terrainData.length - 1)]);
-  }
+
 
   // Spread the blocks to make biomes
   shoots = 0
@@ -138,6 +176,10 @@ $(document).ready(function() {
 
   // Debug info
   console.log("S=" + shoots + " H=" + hit + " M=" + miss);
+
+*/
+
+
   console.log("World generated in "+ (new Date().getTime() - worldGenStart) / 1000 +"s");
 
   // Game Initialize
@@ -153,6 +195,8 @@ $(document).ready(function() {
     drawTerrain(); // draw the terrain
     debug(); // run debug info
   }
+
+  setInterval(drawMinimap, 1000);
 
   function adjustCamera() {
     // Move camera
@@ -242,7 +286,7 @@ $(document).ready(function() {
   //            ctx.globalCompositeOperation = "source-over";
               var x = i * tileSize + camera.x;
               var y = j * tileSize + camera.y;
-              console.log(mapObjects[j][i]);
+              //console.log(mapObjects[j][i]);
               objectData[mapObjects[j][i]].drawCall(x, y);
             }
 
