@@ -69,12 +69,18 @@ $(document).ready(function() {
             noiseAmmount: 0.001,
           },
           {
-            name: "lake",
-            floorColor: "#0857D6",
+            name: "beach",
+            floorColor: "#F6DFA7",
             noiseColor: "#458DFF",
             noiseAmmount: 0.001,
           }
         ];
+
+  biomeForest = 0;
+  biomeDesert = 1;
+  biomeOcean = 2;
+  biomeBeach = 2;
+  biomeNull = -1;
 
 // World generation
   // Initialize world
@@ -89,38 +95,92 @@ $(document).ready(function() {
     }
   }
 
-  falloff = 0.996;
-
+  falloff = 0.9975;
   seed(0,0,1);
 
   // Set up seed blocks
   for (j = 0; j <= Math.round(mapSize / 15000); j++){
-    seed(rand(-mapWidth,mapHeight), rand(-mapHeight,mapHeight), 1);
+//    seed(rand(-mapWidth,mapWidth), rand(-mapHeight,mapHeight), 1);
   }
 
   function seed(x, y, probability) {
-    if (mapTerrain[y][x] == 2 && boundaryCheck(x, y)){
+    if (nearbyCount(x, y, biomeOcean) >= 1 || terrainAt(x,y) == biomeOcean){
       if (probability > Math.random()){
-        mapTerrain[y][x] = 0;
-        seed(x + 1, y, probability * falloff);
-        seed(x - 1, y, probability * falloff);
+        mapTerrain[y][x] = biomeForest;
         seed(x, y + 1, probability * falloff);
         seed(x, y - 1, probability * falloff);
-
+        seed(x + 1, y, probability * falloff);
+        seed(x - 1, y, probability * falloff);
         seed(x - 1, y - 1, probability * falloff);
         seed(x + 1, y - 1, probability * falloff);
         seed(x + 1, y + 1, probability * falloff);
         seed(x - 1, y + 1, probability * falloff);
-
       } else {
-        mapTerrain[y][x] = 1;
+        mapTerrain[y][x] = biomeForest
       }
     }
-
   }
 
   function boundaryCheck(x, y) {
     return (x < mapWidth && y < mapHeight && y > -mapHeight && x > -mapWidth);
+  }
+
+  function terrainAt(x, y) {
+    if (mapTerrain[y]){
+      return mapTerrain[y][x];
+    } else {
+      return undefined;
+    }
+  }
+
+  function nearby(x, y) {
+    return [terrainAt(x - 1, y - 1),
+            terrainAt(x, y - 1),
+            terrainAt(x + 1, y - 1),
+            terrainAt(x - 1, y),
+            terrainAt(x + 1, y),
+            terrainAt(x - 1, y + 1),
+            terrainAt(x, y + 1),
+            terrainAt(x + 1, y + 1),
+    ];
+  }
+
+  function nearbyCount(x, y, biome) {
+    var near = nearby(x, y);
+    var count = 0
+    for (var i = 0; i < near.length; i++) {
+      if (near[i] == biome) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  for (var y = -mapHeight; y <= mapHeight; y++){
+    for (var x = -mapHeight; x <= mapWidth; x++){
+      // Dry up the land
+      if (terrainAt(x,y) == biomeOcean && nearbyCount(x, y, biomeOcean) <= 3) {
+        mapTerrain[y][x] = biomeForest;
+      }
+    }
+  }
+
+  for (var y = -mapHeight; y <= mapHeight; y++){
+    for (var x = -mapHeight; x <= mapWidth; x++){
+      // Dry up the land
+      if (terrainAt(x,y) == biomeOcean && nearbyCount(x, y, biomeOcean) <= 1) {
+        mapTerrain[y][x] = biomeForest;
+      }
+    }
+  }
+
+  for (var y = -mapHeight; y <= mapHeight; y++){
+    for (var x = -mapHeight; x <= mapWidth; x++){
+      // Making beaches
+      if (mapTerrain[y][x] == biomeForest && nearbyCount(x, y, biomeOcean) >= 1) {
+        mapTerrain[y][x] = biomeDesert;
+      }
+    }
   }
 
 /*
@@ -186,7 +246,7 @@ $(document).ready(function() {
 
   mapObjects[5][5] = mapObjects[-5][5] = mapObjects[5][-5] = mapObjects[-5][-5] = 1;
   mapObjects[-1][-1] = 2;
-  // Fps draw
+  // Frame draw
   setInterval(render, 16);
 
   function render() {// frame update
